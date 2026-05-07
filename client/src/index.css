@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: light;
+}
+
+body{
+  overflow-x:hidden;
+  background:#ffffff;
+  color:#111827;
+}
+
+p{
+  color:#464555;
+}
+
+.cardd{
+  height:220px;
+  border-radius:25px;
+  padding:30px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  box-shadow:0 10px 25px rgba(0,0,0,.08);
+}
+
+@keyframes float{
+  0%{transform:translateY(0)}
+  50%{transform:translateY(-15px)}
+}
+
+@keyframes floatt{
+  0%{transform:translateX(0)}
+  50%{transform:translateX(15px)}
+}
