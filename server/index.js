@@ -191,7 +191,7 @@ const connectDB = async () => {
 // CORS
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://chat-app-three-taupe.vercel.app",
+ "https://chat-app-talk.vercel.app",
 ];
 
 app.use(
