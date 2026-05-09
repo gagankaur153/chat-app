@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import Createcontext from "../../context/Createcontext";
 import { IoSend } from "react-icons/io5";
 import { TiMessages } from "react-icons/ti";
@@ -18,6 +18,7 @@ const Chatmaincontent = () => {
 
   const [typemessage, setTypemessage] = useState("");
   const [messages, setMessages] = useState([]);
+  const messagesEndRef = useRef(null);
   const {socket} = useSocketContext()
 
  useEffect(() => {
@@ -38,6 +39,14 @@ const Chatmaincontent = () => {
       fetchMessages();
     }
   }, [openChat]);
+
+  useEffect(() => {
+    if (chatLoading || messages.length === 0) return;
+
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+  }, [messages, chatLoading, openChat]);
 
   const fetchMessages = async () => {
     try {
@@ -139,6 +148,7 @@ const Chatmaincontent = () => {
             </div>
           ))
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
