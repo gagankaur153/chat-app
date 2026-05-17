@@ -55,7 +55,7 @@ const Login = () => {
 
       localStorage.setItem("token", "true");
       setIsauth(true);
-      setSidebarvisible(true);
+      // setSidebarvisible(true);
 
       toast.success(res?.data?.message || "Login Success");
 

@@ -41,11 +41,23 @@ const getCurrentChatters = async (req, res) => {
       return res.status(200).send([]);
     }
 
-    const users = currentchatters.map((chat) =>
-      chat.participants.find(
-        (p) => p._id.toString() !== currentUserId.toString()
-      )
-    );
+    const users = currentchatters
+      .map((chat) => {
+        if (chat.isGroupChat) {
+          return {
+            _id: chat._id,
+            username: chat.groupName,
+            isGroupChat: true,
+            participants: chat.participants,
+            updatedAt: chat.updatedAt,
+          };
+        }
+
+        return chat.participants.find(
+          (p) => p._id.toString() !== currentUserId.toString()
+        );
+      })
+      .filter(Boolean);
 
     return res.status(200).send(users);
 

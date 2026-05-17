@@ -2,12 +2,16 @@ import React, { useEffect, useMemo, useState } from "react";
 import Createcontext from "./Createcontext";
 import api from "../lib/api";
 
+
 const Proviecontext = ({ children }) => {
   const [isauth, setIsauth] = useState(false);
   const [logininfo, setLogininfo] = useState(null);
+  const [groupChatOpen, setGroupChatOpen] = useState(false);
 
   const [sidebarLoading, setSidebarLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+
+  const [allusers, setAllusers] = useState([]);
 
 
   // refresh pe bhi same rahe
@@ -47,6 +51,20 @@ const Proviecontext = ({ children }) => {
     setSidebarvisible((prev) => !prev);
   };
 
+  useEffect(() => {
+    if (groupChatOpen) {
+      api
+        .get("/api/message/alluser")
+        .then((res) => {
+          setAllusers(res.data.data);
+        })
+        .catch((err) => console.log(err));
+    }
+  }, [groupChatOpen]);
+ 
+
+  
+
   const value = useMemo(
     () => ({
       isauth,
@@ -71,6 +89,12 @@ const Proviecontext = ({ children }) => {
       refreshSidebar,
       setRefreshSidebar,
 
+      groupChatOpen,
+      setGroupChatOpen,
+
+      allusers,
+      setAllusers,
+
     }),
     [
       isauth,
@@ -80,6 +104,8 @@ const Proviecontext = ({ children }) => {
       sidebarvisible,
       openChat,
       refreshSidebar,
+      groupChatOpen,
+      allusers,
     ]
   );
 
@@ -89,5 +115,6 @@ const Proviecontext = ({ children }) => {
     </Createcontext.Provider>
   );
 };
+
 
 export default Proviecontext;

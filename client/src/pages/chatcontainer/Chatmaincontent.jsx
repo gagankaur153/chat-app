@@ -1,7 +1,8 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import Createcontext from "../../context/Createcontext";
 import { IoSend } from "react-icons/io5";
 import { TiMessages } from "react-icons/ti";
+import { FiArrowLeft } from "react-icons/fi";
 import Loading from "../loading/Loading";
 // import { Socket } from "socket.io-client";
 import { FaUser } from "react-icons/fa";
@@ -11,34 +12,66 @@ import api from "../../lib/api";
 const Chatmaincontent = () => {
   const {
     openChat,
+    setOpenChat,
     chatLoading,
     setChatLoading,
     setRefreshSidebar,
+    logininfo,
   } = useContext(Createcontext);
 
   const [typemessage, setTypemessage] = useState("");
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
-  const {socket} = useSocketContext()
+  const { socket } = useSocketContext();
 
- useEffect(() => {
-  if (!socket) return;
+  const fetchMessages = useCallback(async () => {
+    if (!openChat?._id) return;
 
-  const handleNewMessage = (newMessage) => {
-    setMessages((prev) => [...prev, newMessage]);
-  };
+    try {
+      setChatLoading(true);
 
-  socket.on("newMessage", handleNewMessage);
+      const endpoint = openChat.isGroupChat
+        ? `/api/message/group/${openChat._id}`
+        : `/api/message/${openChat._id}`;
 
-  return () => {
-    socket.off("newMessage", handleNewMessage);
-  };
-}, [socket]);
-  useEffect(() => {
-    if (openChat) {
-      fetchMessages();
+      const res = await api.get(endpoint);
+
+      setMessages(res.data);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setChatLoading(false);
     }
-  }, [openChat]);
+  }, [openChat, setChatLoading]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (newMessage) => {
+      const senderId =
+        typeof newMessage.senderId === "object"
+          ? newMessage.senderId?._id
+          : newMessage.senderId;
+
+      const belongsToOpenChat = openChat?.isGroupChat
+        ? newMessage.conversationId === openChat?._id
+        : senderId === openChat?._id;
+
+      if (belongsToOpenChat) {
+        setMessages((prev) => [...prev, newMessage]);
+      }
+    };
+
+    socket.on("newMessage", handleNewMessage);
+
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [socket, openChat]);
+
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
 
   useEffect(() => {
     if (chatLoading || messages.length === 0) return;
@@ -48,25 +81,15 @@ const Chatmaincontent = () => {
     });
   }, [messages, chatLoading, openChat]);
 
-  const fetchMessages = async () => {
-    try {
-      setChatLoading(true);
-
-      const res = await api.get(`/api/message/${openChat._id}`);
-
-      setMessages(res.data);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
   const sendmessage = async () => {
     try {
       if (!typemessage.trim()) return;
 
-      const res = await api.post(`/api/message/send/${openChat._id}`, { message: typemessage });
+      const endpoint = openChat.isGroupChat
+        ? `/api/message/group/send/${openChat._id}`
+        : `/api/message/send/${openChat._id}`;
+
+      const res = await api.post(endpoint, { message: typemessage });
 
       setMessages((prev) => [...prev, res.data]);
       setTypemessage("");
@@ -80,9 +103,9 @@ const Chatmaincontent = () => {
 
   if (!openChat) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-3">
+      <div className="h-full flex-1 flex flex-col items-center justify-center gap-3">
         <h1 className="text-3xl font-bold text-purple-700">
-          Welcome
+          {`Welcome ${logininfo ? logininfo?.username : ""}`}
         </h1>
         <TiMessages className="text-8xl text-purple-500" />
       </div>
@@ -90,18 +113,31 @@ const Chatmaincontent = () => {
   }
 
   return (
-    <div className="h-full flex bg-purple-50 flex-col">
+    <div className="h-full w-full flex bg-purple-50 flex-col">
       {/* Header */}
-      <div className="bg-white flex gap-5 items-center sm:px-12 border-b border-b-gray-200 p-4 mb-3">
+      <div className="bg-white flex gap-3 sm:gap-5 items-center sm:px-12 border-b border-b-gray-200 p-4 mb-3">
+       <button
+        type="button"
+        onClick={() => setOpenChat(null)}
+        className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 md:hidden"
+        aria-label="Back to conversations"
+       >
+        <FiArrowLeft className="text-xl" />
+       </button>
+
        {
-        openChat?.profilePic ? <>
+        openChat?.isGroupChat ? <>
+        <div className="rounded-full bg-blue-100 p-2 text-blue-700">
+          <FaUser/>
+        </div>
+        </> : openChat?.profilePic ? <>
         <img src={openChat?.profilePic} alt="" className="h-10 w-10 rounded-full" />
         </> : <> <div className="rounded-full hover:bg-gray-300 hover:text-black  transition-all duration-300 cursor-pointer bg-blue-700 text-white p-2">
           <FaUser/>
         </div>
         </>
        }
-        <h1 className="text-xl font-medium">{openChat.username}</h1>
+        <h1 className="text-xl font-medium">{openChat.username || openChat.groupName}</h1>
       </div>
 
       {/* Messages */}
@@ -116,22 +152,28 @@ const Chatmaincontent = () => {
           </div>
           
         ) : (
-          messages.map((msg) => (
-            <div
-              key={msg._id}
-              className={`chat ${
-                msg?.senderId !== openChat?._id
-                  ? "chat-end"
-                  : "chat-start"
-              }`}
-            >
+          messages.map((msg) => {
+            const senderId =
+              typeof msg?.senderId === "object" ? msg.senderId?._id : msg?.senderId;
+            const isMine = senderId === logininfo?._id;
+
+            return (
+              <div
+                key={msg._id}
+                className={`chat ${isMine ? "chat-end" : "chat-start"}`}
+              >
               <div className="flex flex-col"
                
               >
+                {openChat.isGroupChat && !isMine && (
+                  <span className="mb-1 text-xs font-medium text-slate-500">
+                    {msg.senderId?.username || "Member"}
+                  </span>
+                )}
                 <div  className={`chat-bubble-info px-4 flex items-end gap-2 space-y-4 text-white py-1 max-w-xs ${
-                  msg?.senderId === openChat?._id
-                    ? "bg-purple-600 rounded-xl rounded-bl-none"
-                    : "bg-gray-600 rounded-xl rounded-br-none"
+                  isMine
+                    ? "bg-gray-600 rounded-xl rounded-br-none"
+                    : "bg-purple-600 rounded-xl rounded-bl-none"
                 }`}>{msg?.message}</div>
 
                 <div className="opacity-70  text-[10px] self-end">
@@ -146,7 +188,8 @@ const Chatmaincontent = () => {
                 </div>
               </div>
             </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

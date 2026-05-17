@@ -32,7 +32,7 @@ const Navbar = () => {
 
   return (
     <header
-      className={`fixed top-0 right-0 z-999 h-16 bg-white border-b border-gray-200 shadow-sm transition-all duration-300
+      className={`fixed top-0 right-0 z-[999] h-16 bg-white border-b border-gray-200 shadow-sm transition-all duration-300
       ${sidebarvisible ? " left-[51px] sm:left-[200px] md:left-[280px] lg:left-[300px] xl:left-[320px] px-6" : "left-0 px-6"}`}
     >
       <nav className="h-full flex items-center justify-between max-w-7xl mx-auto">
